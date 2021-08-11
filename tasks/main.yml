@@ -43,21 +43,21 @@
     cmd: sh -s -- -y
     stdin: "{{ repo_installer.content }}"
 
-  - name: Install packages
-    yum: name={{ prometheus_rpm_components }} state="{{ prometheus_rpm_package_state }}" update_cache=no lock_timeout=180
-    notify: systemctl daemon-reload
+ - name: Install packages
+   yum: name={{ prometheus_rpm_components }} state="{{ prometheus_rpm_package_state }}" update_cache=no lock_timeout=180
+   notify: systemctl daemon-reload
 
-  - name: Start service
-    service: name={{ item }} state=started enabled=yes
-    with_items: "{{ prometheus_rpm_components }}"
-    when: "item not in ['prometheus', 'prometheus2']"
+ - name: Start service
+   service: name={{ item }} state=started enabled=yes
+   with_items: "{{ prometheus_rpm_components }}"
+   when: "item not in ['prometheus', 'prometheus2']"
 
-  - name: Start service
-    service: name=prometheus state=started enabled=yes
-    with_items: "{{ prometheus_rpm_components }}"
-    when: "item in ['prometheus', 'prometheus2']"
+ - name: Start service
+   service: name=prometheus state=started enabled=yes
+   with_items: "{{ prometheus_rpm_components }}"
+   when: "item in ['prometheus', 'prometheus2']"
 
-  when: ansible_os_family == 'RedHat'
+#   when: ansible_os_family == 'RedHat'
 
 - name: Configure alertmanager
   template: src=etc/default/alertmanager.j2 dest=/etc/default/alertmanager owner=root group=root mode=0644

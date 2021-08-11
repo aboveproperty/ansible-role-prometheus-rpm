@@ -18,7 +18,7 @@
       name: prometheus
       description: Repository with Prometheus RPM packages for CentOS 7
       baseurl: https://packagecloud.io/prometheus-rpm/release/el/7/$basearch
-      gpgcheck: yes
+      gpgcheck: no
       repo_gpgcheck: yes
       metadata_expire: "300"
       gpgkey: "https://packagecloud.io/prometheus-rpm/release/gpgkey https://raw.githubusercontent.com/lest/prometheus-rpm/master/RPM-GPG-KEY-prometheus-rpm"
@@ -33,7 +33,7 @@
     when: import_key.changed
 
   - name: Install packages
-    yum: name={{ prometheus_rpm_components }} state="{{ prometheus_rpm_package_state }}" update_cache=yes
+    yum: name={{ prometheus_rpm_components }} state="{{ prometheus_rpm_package_state }}" update_cache=no
     notify: systemctl daemon-reload
 
   - name: Start service

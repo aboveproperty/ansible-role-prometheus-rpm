@@ -33,7 +33,7 @@
     when: import_key.changed
 
   - name: Install packages
-    yum: name={{ prometheus_rpm_components }} state="{{ prometheus_rpm_package_state }}" update_cache=no
+    yum: name={{ prometheus_rpm_components }} state="{{ prometheus_rpm_package_state }}" update_cache=no lock_timeout=180
     notify: systemctl daemon-reload
 
   - name: Start service

@@ -1,63 +1,63 @@
 ---
 # prometheus-rpm/tasks/main.yml
 
-# - block:
-#   - name: Add repo keys
-#     rpm_key:
-#       state: present
-#       key: "{{ item }}"
-#       validate_certs: yes
-#     with_items:
-#       - https://packagecloud.io/prometheus-rpm/release/gpgkey
-#       - https://raw.githubusercontent.com/lest/prometheus-rpm/master/RPM-GPG-KEY-prometheus-rpm
-#       - https://packagecloud.io/gpg.key
-#     register: import_key
+- block:
+  # - name: Add repo keys
+  #   rpm_key:
+  #     state: present
+  #     key: "{{ item }}"
+  #     validate_certs: yes
+  #   with_items:
+  #     - https://packagecloud.io/prometheus-rpm/release/gpgkey
+  #     - https://raw.githubusercontent.com/lest/prometheus-rpm/master/RPM-GPG-KEY-prometheus-rpm
+  #     - https://packagecloud.io/gpg.key
+  #   register: import_key
 
-#   - name: Add repository
-#     yum_repository:
-#       name: prometheus
-#       description: Repository with Prometheus RPM packages for CentOS 7
-#       baseurl: https://packagecloud.io/prometheus-rpm/release/el/7/$basearch
-#       gpgcheck: no
-#       repo_gpgcheck: yes
-#       metadata_expire: "300"
-#       gpgkey: "https://packagecloud.io/prometheus-rpm/release/gpgkey https://raw.githubusercontent.com/lest/prometheus-rpm/master/RPM-GPG-KEY-prometheus-rpm"
-#       sslverify: yes
-#       sslcacert: /etc/pki/tls/certs/ca-bundle.crt
+  # - name: Add repository
+  #   yum_repository:
+  #     name: prometheus
+  #     description: Repository with Prometheus RPM packages for CentOS 7
+  #     baseurl: https://packagecloud.io/prometheus-rpm/release/el/7/$basearch
+  #     gpgcheck: no
+  #     repo_gpgcheck: yes
+  #     metadata_expire: "300"
+  #     gpgkey: "https://packagecloud.io/prometheus-rpm/release/gpgkey https://raw.githubusercontent.com/lest/prometheus-rpm/master/RPM-GPG-KEY-prometheus-rpm"
+  #     sslverify: yes
+  #     sslcacert: /etc/pki/tls/certs/ca-bundle.crt
 
-  # https://github.com/ansible/ansible/issues/20711
-  # This uses different keys compared to rpm_key above
-  # There is currently no Ansible command to do this
-#   - name: Force import of gpg key used to sign metadata
-#     command: "yum -q makecache -y --disablerepo=* --enablerepo=prometheus"
-#     when: import_key.changed
+  # # https://github.com/ansible/ansible/issues/20711
+  # # This uses different keys compared to rpm_key above
+  # # There is currently no Ansible command to do this
+  # - name: Force import of gpg key used to sign metadata
+  #   command: "yum -q makecache -y --disablerepo=* --enablerepo=prometheus"
+  #   when: import_key.changed
 
-- name: Fetch repo installer
-  ansible.builtin.uri:
-    url: https://packagecloud.io/install/repositories/prometheus-rpm/release/script.rpm.sh
-    return_content: yes
-  register: repo_installer
+  - name: Fetch repo installer
+    ansible.builtin.uri:
+      url: https://packagecloud.io/install/repositories/prometheus-rpm/release/script.rpm.sh
+      return_content: yes
+    register: repo_installer
 
-- name: Run repo installer
-  ansible.builtin.shell:
-    cmd: sh -s -- -y
-    stdin: "{{ repo_installer.content }}"
+  - name: Run repo installer
+    ansible.builtin.shell:
+      cmd: sh -s -- -y
+      stdin: "{{ repo_installer.content }}"
+      
+  - name: Install packages
+    yum: name={{ prometheus_rpm_components }} state="{{ prometheus_rpm_package_state }}" update_cache=no
+    notify: systemctl daemon-reload
 
- - name: Install packages
-   yum: name={{ prometheus_rpm_components }} state="{{ prometheus_rpm_package_state }}" update_cache=no lock_timeout=180
-   notify: systemctl daemon-reload
+  - name: Start service
+    service: name={{ item }} state=started enabled=yes
+    with_items: "{{ prometheus_rpm_components }}"
+    when: "item not in ['prometheus', 'prometheus2']"
 
- - name: Start service
-   service: name={{ item }} state=started enabled=yes
-   with_items: "{{ prometheus_rpm_components }}"
-   when: "item not in ['prometheus', 'prometheus2']"
+  - name: Start service
+    service: name=prometheus state=started enabled=yes
+    with_items: "{{ prometheus_rpm_components }}"
+    when: "item in ['prometheus', 'prometheus2']"
 
- - name: Start service
-   service: name=prometheus state=started enabled=yes
-   with_items: "{{ prometheus_rpm_components }}"
-   when: "item in ['prometheus', 'prometheus2']"
-
-#   when: ansible_os_family == 'RedHat'
+  when: ansible_os_family == 'RedHat'
 
 - name: Configure alertmanager
   template: src=etc/default/alertmanager.j2 dest=/etc/default/alertmanager owner=root group=root mode=0644
